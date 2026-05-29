@@ -1,11 +1,46 @@
-def split_book(text, chunk_size=3500):
+import re
+
+
+def clean_text(text):
 
     """
-    Splits long books into readable chunks.
-    Keeps paragraphs together.
+    Cleans extracted PDF text.
     """
 
-    paragraphs = text.split("\n\n")
+    text = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        text
+    )
+
+
+    text = re.sub(
+        r"[ ]+",
+        " ",
+        text
+    )
+
+
+    return text.strip()
+
+
+
+
+
+def split_book(text, chunk_size=2200):
+
+    """
+    Splits books into comfortable reading pages.
+    """
+
+    text = clean_text(
+        text
+    )
+
+
+    paragraphs = text.split(
+        "\n\n"
+    )
 
 
     chunks = []
@@ -24,15 +59,19 @@ def split_book(text, chunk_size=3500):
             current += paragraph + "\n\n"
 
 
+
         else:
 
 
-            chunks.append(
-                current.strip()
-            )
+            if current.strip():
+
+                chunks.append(
+                    current.strip()
+                )
 
 
             current = paragraph + "\n\n"
+
 
 
 
@@ -43,6 +82,7 @@ def split_book(text, chunk_size=3500):
         chunks.append(
             current.strip()
         )
+
 
 
 

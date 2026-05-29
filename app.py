@@ -9,57 +9,81 @@ from book_utils import split_book
 
 
 
-# -----------------------------------
-# PAGE CONFIG
-# -----------------------------------
+# ---------------- CONFIG ----------------
+
 
 st.set_page_config(
-
     page_title="Literature Companion",
-
     page_icon="📚",
-
     layout="wide"
-
 )
 
 
 
 
-# -----------------------------------
-# SESSION STATE
-# -----------------------------------
+# ---------------- SESSION ----------------
 
 
-if "chunks" not in st.session_state:
+defaults = {
 
-    st.session_state.chunks = []
+    "chunks": [],
 
+    "page": 0,
 
+    "cache": {}
 
-if "page" not in st.session_state:
-
-    st.session_state.page = 0
-
-
-
-if "cache" not in st.session_state:
-
-    st.session_state.cache = {}
+}
 
 
 
+for key, value in defaults.items():
+
+    if key not in st.session_state:
+
+        st.session_state[key] = value
 
 
-# -----------------------------------
-# HELPERS
-# -----------------------------------
+
+
+
+
+# ---------------- HELPERS ----------------
+
+
+def format_text(text):
+
+
+    text = html.escape(
+        text
+    )
+
+
+    paragraphs = text.split(
+        "\n\n"
+    )
+
+
+    return "".join(
+
+        f"<p>{p.strip()}</p>"
+
+        for p in paragraphs
+
+        if p.strip()
+
+    )
+
+
+
 
 
 def add_tooltips(text, words):
 
 
-    text = html.escape(text)
+    text = html.escape(
+        text
+    )
+
 
 
     for word, meaning in words.items():
@@ -76,6 +100,7 @@ def add_tooltips(text, words):
         )
 
 
+
         text = re.sub(
 
             rf"\b{re.escape(word)}\b",
@@ -89,18 +114,32 @@ def add_tooltips(text, words):
         )
 
 
-    return text.replace(
-        "\n",
-        "<br><br>"
+
+
+    paragraphs = text.split(
+        "\n\n"
+    )
+
+
+
+    return "".join(
+
+        f"<p>{p}</p>"
+
+        for p in paragraphs
+
+        if p.strip()
+
     )
 
 
 
 
 
-# -----------------------------------
-# CSS
-# -----------------------------------
+
+
+
+# ---------------- STYLE ----------------
 
 
 st.markdown(
@@ -108,11 +147,31 @@ st.markdown(
 <style>
 
 
+.block-container {
+
+max-width:1200px;
+
+padding-top:2rem;
+
+}
+
+
+
 .reader {
 
-font-size:19px;
+font-size:20px;
 
-line-height:1.9;
+line-height:1.75;
+
+max-width:950px;
+
+}
+
+
+
+.reader p {
+
+margin-bottom:18px;
 
 }
 
@@ -154,9 +213,9 @@ left:50%;
 
 transform:translateX(-50%);
 
-z-index:999;
-
 font-size:14px;
+
+z-index:10;
 
 }
 
@@ -172,15 +231,13 @@ visibility:visible;
 
 .word-card {
 
-padding:12px;
+padding:14px;
 
-margin-bottom:10px;
+margin-bottom:12px;
 
 border-radius:10px;
 
-background-color:rgba(255,255,255,0.05);
-
-font-size:17px;
+background:rgba(255,255,255,0.05);
 
 }
 
@@ -190,16 +247,16 @@ font-size:17px;
 """,
 
 unsafe_allow_html=True
-
 )
 
 
 
 
 
-# -----------------------------------
-# HEADER
-# -----------------------------------
+
+
+
+# ---------------- HEADER ----------------
 
 
 st.title(
@@ -209,9 +266,7 @@ st.title(
 
 
 st.write(
-
-    "Read classic books in modern English without losing their soul."
-
+    "A modern reading experience for classic literature."
 )
 
 
@@ -219,9 +274,9 @@ st.write(
 
 
 
-# -----------------------------------
-# SETTINGS
-# -----------------------------------
+
+
+# ---------------- SETTINGS ----------------
 
 
 level = st.select_slider(
@@ -229,13 +284,11 @@ level = st.select_slider(
     "Reading Style",
 
     [
-
         "Simple",
 
         "Modern",
 
         "Literary"
-
     ],
 
     value="Modern"
@@ -244,151 +297,193 @@ level = st.select_slider(
 
 
 
-show_original = st.checkbox(
 
-    "Show original text",
+c1,c2,c3 = st.columns(3)
 
-    value=False
 
-)
 
 
+with c1:
 
-show_notes = st.checkbox(
 
-    "Show reader notes",
+    show_original = st.checkbox(
 
-    value=True
+        "Show Original",
 
-)
+        False
 
+    )
 
 
-show_meaning = st.checkbox(
 
-    "Show deeper meaning",
 
-    value=True
 
-)
+with c2:
 
 
+    show_notes = st.checkbox(
 
+        "Reader Notes",
 
+        True
 
-# -----------------------------------
-# INPUT
-# -----------------------------------
+    )
 
 
-uploaded_file = st.file_uploader(
 
-    "Upload a classic book PDF",
 
-    type=["pdf"]
 
-)
+with c3:
 
 
+    show_meaning = st.checkbox(
 
+        "Understanding",
 
-paste_text = st.text_area(
+        True
 
-    "Or paste a passage",
+    )
 
-    height=180
 
-)
 
 
 
 
 
 
-if st.button(
-    "Load Text"
-):
 
+# ---------------- INPUT ----------------
 
-    text = ""
 
+if not st.session_state.chunks:
 
-    if uploaded_file:
 
 
-        text = extract_text_from_pdf(
-            uploaded_file
-        )
+    uploaded_file = st.file_uploader(
 
+        "Upload PDF",
 
+        type=["pdf"]
 
-    elif paste_text.strip():
+    )
 
 
-        text = paste_text
 
 
+    paste_text = st.text_area(
 
-    else:
+        "Or paste text",
 
+        height=180
 
-        st.warning(
-            "Upload a PDF or paste text."
-        )
+    )
 
 
 
-    if text:
 
 
-        st.session_state.chunks = split_book(
-            text
-        )
+    if st.button(
+        "📖 Start Reading"
+    ):
 
 
-        st.session_state.page = 0
 
+        text = ""
 
-        st.session_state.cache = {}
 
 
-        st.success(
+        if uploaded_file:
 
-            f"Loaded {len(st.session_state.chunks)} reading sections."
 
-        )
 
+            text = extract_text_from_pdf(
 
+                uploaded_file
 
+            )
 
 
 
 
-# -----------------------------------
-# READER
-# -----------------------------------
+        elif paste_text.strip():
+
+
+
+            text = paste_text
+
+
+
+
+
+
+        if text:
+
+
+
+            st.session_state.chunks = split_book(
+
+                text
+
+            )
+
+
+
+            st.session_state.cache = {}
+
+
+
+            st.session_state.page = 0
+
+
+
+            st.rerun()
+
+
+
+
+
+
+        else:
+
+
+            st.warning(
+
+                "Upload a PDF or paste text first."
+
+            )
+
+
+
+
+
+
+
+
+
+# ---------------- READER ----------------
 
 
 if st.session_state.chunks:
 
 
 
-    current_page = st.session_state.page
+
+    page = st.session_state.page
 
 
 
-    current_text = (
+    total = len(
 
-        st.session_state
-        .chunks[current_page]
+        st.session_state.chunks
 
     )
+
 
 
 
     st.caption(
 
-        f"Page {current_page + 1} / {len(st.session_state.chunks)}"
+        f"Page {page + 1} of {total}"
 
     )
 
@@ -396,21 +491,37 @@ if st.session_state.chunks:
 
 
 
-    # AI CACHE CHECK
+
+    original_text = (
+
+        st.session_state
+        .chunks[page]
+
+    )
 
 
-    if current_page not in st.session_state.cache:
+
+
+
+
+
+
+    if page not in st.session_state.cache:
+
 
 
 
         with st.spinner(
-            "Preparing your modern version..."
+
+            "Preparing your page..."
+
         ):
 
 
-            st.session_state.cache[current_page] = process_text(
 
-                current_text,
+            st.session_state.cache[page] = process_text(
+
+                original_text,
 
                 level
 
@@ -421,40 +532,56 @@ if st.session_state.chunks:
 
 
 
+
+
+
     result = st.session_state.cache[
-        current_page
+        page
     ]
 
 
 
 
 
-    modern = result[
-        "modern_version"
-    ].replace(
-        "\n",
-        "<br><br>"
+
+    modern = format_text(
+
+        result["modern_version"]
+
     )
+
 
 
 
     words = result.get(
+
         "difficult_words",
+
         {}
+
     )
+
 
 
 
     phrases = result.get(
+
         "old_phrases",
+
         {}
+
     )
+
+
 
 
 
     insight = result.get(
+
         "reader_insight",
+
         ""
+
     )
 
 
@@ -463,12 +590,14 @@ if st.session_state.chunks:
 
 
 
-    # --------------------------
-    # TEXT DISPLAY
-    # --------------------------
+
+
+    # ---------- TEXT DISPLAY ----------
+
 
 
     if show_original:
+
 
 
 
@@ -476,30 +605,29 @@ if st.session_state.chunks:
 
 
 
+
+
         with left:
 
 
-            st.subheader(
+            st.header(
                 "📖 Original"
             )
 
 
-            original = add_tooltips(
-
-                current_text,
-
-                words
-
-            )
-
 
             st.markdown(
 
-                f"<div class='reader'>{original}</div>",
+                f"""
+                <div class="reader">
+                {add_tooltips(original_text, words)}
+                </div>
+                """,
 
                 unsafe_allow_html=True
 
             )
+
 
 
 
@@ -508,14 +636,20 @@ if st.session_state.chunks:
         with right:
 
 
-            st.subheader(
+
+            st.header(
                 "✨ Modern Version"
             )
 
 
+
             st.markdown(
 
-                f"<div class='reader'>{modern}</div>",
+                f"""
+                <div class="reader">
+                {modern}
+                </div>
+                """,
 
                 unsafe_allow_html=True
 
@@ -525,17 +659,26 @@ if st.session_state.chunks:
 
 
 
+
+
     else:
 
 
-        st.subheader(
+
+
+        st.header(
             "✨ Modern Version"
         )
 
 
+
         st.markdown(
 
-            f"<div class='reader'>{modern}</div>",
+            f"""
+            <div class="reader">
+            {modern}
+            </div>
+            """,
 
             unsafe_allow_html=True
 
@@ -547,16 +690,21 @@ if st.session_state.chunks:
 
 
 
-    # --------------------------
-    # NAVIGATION
-    # --------------------------
-
-
-    prev,next = st.columns(2)
 
 
 
-    with prev:
+    # ---------- NAVIGATION ----------
+
+
+
+    back,regen,next_page,clear = st.columns(4)
+
+
+
+
+
+    with back:
+
 
 
         if st.button(
@@ -564,12 +712,15 @@ if st.session_state.chunks:
         ):
 
 
-            if st.session_state.page > 0:
+
+            if page > 0:
+
 
 
                 st.session_state.page -= 1
 
 
+
                 st.rerun()
 
 
@@ -577,26 +728,54 @@ if st.session_state.chunks:
 
 
 
-    with next:
+
+    with regen:
+
 
 
         if st.button(
-            "Next ➡"
+            "🔄 Regenerate"
         ):
 
 
-            if (
 
-                st.session_state.page
+            st.session_state.cache.pop(
 
-                < len(st.session_state.chunks)-1
+                page,
 
+                None
+
+            )
+
+
+
+            st.rerun()
+
+
+
+
+
+
+
+
+    with next_page:
+
+
+
+        if page < total - 1:
+
+
+
+            if st.button(
+                "Next ➡"
             ):
+
 
 
                 st.session_state.page += 1
 
 
+
                 st.rerun()
 
 
@@ -605,95 +784,148 @@ if st.session_state.chunks:
 
 
 
+    with clear:
 
-    # --------------------------
-    # NOTES
-    # --------------------------
+
+
+        if st.button(
+            "🗑 Clear Book"
+        ):
+
+
+
+            st.session_state.chunks = []
+
+
+
+            st.session_state.cache = {}
+
+
+
+            st.session_state.page = 0
+
+
+
+            st.rerun()
+
+
+
+
+
+
+
+
+
+
+    # ---------- NOTES ----------
+
 
 
     if show_notes:
 
 
-        st.divider()
 
-
-        st.header(
+        with st.expander(
             "🧠 Reader Notes"
-        )
-
-
-        with st.container(
-            border=True
         ):
 
 
 
-            for word, meaning in words.items():
+
+            if words:
 
 
-                st.markdown(
 
-                    f"""
-
-                    <div class='word-card'>
-
-                    <b>{word}</b><br>
-
-                    {meaning}
-
-                    </div>
-
-                    """,
-
-                    unsafe_allow_html=True
-
+                st.subheader(
+                    "Vocabulary"
                 )
 
 
 
 
-            for phrase, meaning in phrases.items():
+                for word,meaning in words.items():
 
 
-                st.markdown(
 
-                    f"""
+                    st.markdown(
 
-                    <div class='word-card'>
+                        f"""
+                        <div class="word-card">
 
-                    <b>{phrase}</b><br>
+                        <b>{word}</b><br>
 
-                    {meaning}
+                        {meaning}
 
-                    </div>
+                        </div>
+                        """,
 
-                    """,
+                        unsafe_allow_html=True
 
-                    unsafe_allow_html=True
+                    )
 
+
+
+
+
+
+
+            if phrases:
+
+
+
+                st.subheader(
+                    "Old Expressions"
                 )
 
 
 
+
+                for phrase,meaning in phrases.items():
+
+
+
+                    st.markdown(
+
+                        f"""
+                        <div class="word-card">
+
+                        <b>{phrase}</b><br>
+
+                        {meaning}
+
+                        </div>
+                        """,
+
+                        unsafe_allow_html=True
+
+                    )
+
+
+
+
+
+
+
+
+
+    # ---------- UNDERSTANDING ----------
 
 
 
     if show_meaning and insight:
 
 
-        st.divider()
 
+        with st.expander(
 
-        st.header(
-            "💭 Understanding"
-        )
+            "💭 Understanding the Passage"
 
-
-        with st.container(
-            border=True
         ):
 
 
-            st.markdown(
+
+            st.write(
+
                 insight
+
             )
