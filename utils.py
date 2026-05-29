@@ -1,26 +1,112 @@
 import os
+import re
+import json
+
 import google.generativeai as genai
+
 from dotenv import load_dotenv
-from prompts import SIMPLIFY_PROMPT, VOCAB_PROMPT
+from prompts import MASTER_PROMPT
+
 
 load_dotenv()
 
-API_KEY = os.getenv("GEMINI_API_KEY")
 
-genai.configure(api_key=API_KEY)
+API_KEY = os.getenv(
+    "GEMINI_API_KEY"
+)
 
-model = genai.GenerativeModel("gemini-2.5-flash")
 
+if not API_KEY:
 
-def simplify_text(text):
-    response = model.generate_content(
-        SIMPLIFY_PROMPT + text
+    raise Exception(
+        "Missing GEMINI_API_KEY"
     )
-    return response.text
 
 
-def explain_words(text):
-    response = model.generate_content(
-        VOCAB_PROMPT + text
+genai.configure(
+    api_key=API_KEY
+)
+
+
+model = genai.GenerativeModel(
+    "gemini-2.5-flash",
+    generation_config={
+        "temperature":0.4
+    }
+)
+
+
+
+def extract_json(text):
+
+    text = (
+        text.replace("```json","")
+        .replace("```","")
+        .strip()
     )
-    return response.text
+
+
+    match = re.search(
+        r"\{.*\}",
+        text,
+        re.DOTALL
+    )
+
+
+    if not match:
+
+        raise Exception(
+            "Invalid AI response"
+        )
+
+
+    return json.loads(
+        match.group()
+    )
+
+
+
+
+def process_text(text, level):
+
+
+    instruction=f"""
+
+Reading Mode:
+
+{level}
+
+
+Simple:
+Very clear beginner-friendly English.
+
+Modern:
+Natural English for today's readers.
+
+Literary:
+Keep more poetic style but remove outdated language.
+
+"""
+
+
+    prompt=f"""
+
+{MASTER_PROMPT}
+
+
+{instruction}
+
+
+{text[:15000]}
+
+"""
+
+
+    response=model.generate_content(
+        prompt
+    )
+
+
+    return extract_json(
+        response.text
+    )
