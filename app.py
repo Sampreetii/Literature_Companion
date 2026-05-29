@@ -2,58 +2,106 @@ import streamlit as st
 import re
 import html
 
+
 from utils import process_text
 from pdf_utils import extract_text_from_pdf
+from book_utils import split_book
 
+
+
+# -----------------------------------
+# PAGE CONFIG
+# -----------------------------------
 
 st.set_page_config(
+
     page_title="Literature Companion",
+
     page_icon="📚",
+
     layout="wide"
+
 )
 
 
 
-# ----------------------------
-# Tooltip generator
-# ----------------------------
+
+# -----------------------------------
+# SESSION STATE
+# -----------------------------------
+
+
+if "chunks" not in st.session_state:
+
+    st.session_state.chunks = []
+
+
+
+if "page" not in st.session_state:
+
+    st.session_state.page = 0
+
+
+
+if "cache" not in st.session_state:
+
+    st.session_state.cache = {}
+
+
+
+
+
+# -----------------------------------
+# HELPERS
+# -----------------------------------
+
 
 def add_tooltips(text, words):
+
 
     text = html.escape(text)
 
 
     for word, meaning in words.items():
 
+
         tooltip = (
+
             f"<span class='tooltip'>{word}"
+
             f"<span class='tooltiptext'>{meaning}</span>"
+
             f"</span>"
+
         )
 
 
         text = re.sub(
+
             rf"\b{re.escape(word)}\b",
+
             tooltip,
+
             text,
+
             flags=re.IGNORECASE
+
         )
 
 
-    text = text.replace(
+    return text.replace(
         "\n",
         "<br><br>"
     )
 
 
-    return text
 
 
 
+# -----------------------------------
+# CSS
+# -----------------------------------
 
-# ----------------------------
-# Styling
-# ----------------------------
 
 st.markdown(
 """
@@ -66,53 +114,25 @@ font-size:19px;
 
 line-height:1.9;
 
-letter-spacing:0.2px;
-
 }
 
 
 
-.note-text {
-
-font-size:18px;
-
-line-height:1.8;
-
-}
-
-
-
-.word-card {
-
-font-size:17px;
-
-padding:12px;
-
-margin-bottom:10px;
-
-border-radius:10px;
-
-background-color:rgba(255,255,255,0.04);
-
-}
-
-
-
-.tooltip{
+.tooltip {
 
 color:#FFD369;
 
 font-weight:bold;
 
-position:relative;
-
 cursor:pointer;
+
+position:relative;
 
 }
 
 
 
-.tooltip .tooltiptext{
+.tooltip .tooltiptext {
 
 visibility:hidden;
 
@@ -124,9 +144,9 @@ color:white;
 
 padding:10px;
 
-border-radius:10px;
+border-radius:8px;
 
-width:230px;
+width:220px;
 
 top:120%;
 
@@ -142,41 +162,66 @@ font-size:14px;
 
 
 
-.tooltip:hover .tooltiptext{
+.tooltip:hover .tooltiptext {
 
 visibility:visible;
 
 }
 
 
+
+.word-card {
+
+padding:12px;
+
+margin-bottom:10px;
+
+border-radius:10px;
+
+background-color:rgba(255,255,255,0.05);
+
+font-size:17px;
+
+}
+
+
+
 </style>
 """,
+
 unsafe_allow_html=True
+
 )
 
 
 
 
 
-# ----------------------------
-# Header
-# ----------------------------
+# -----------------------------------
+# HEADER
+# -----------------------------------
+
 
 st.title(
     "📚 Literature Companion"
 )
 
 
+
 st.write(
-    "Experience classic books in modern English without losing their soul."
+
+    "Read classic books in modern English without losing their soul."
+
 )
 
 
 
 
-# ----------------------------
-# Options
-# ----------------------------
+
+
+# -----------------------------------
+# SETTINGS
+# -----------------------------------
 
 
 level = st.select_slider(
@@ -184,9 +229,13 @@ level = st.select_slider(
     "Reading Style",
 
     [
+
         "Simple",
+
         "Modern",
+
         "Literary"
+
     ],
 
     value="Modern"
@@ -195,9 +244,19 @@ level = st.select_slider(
 
 
 
+show_original = st.checkbox(
+
+    "Show original text",
+
+    value=False
+
+)
+
+
+
 show_notes = st.checkbox(
 
-    "Show vocabulary and old expressions",
+    "Show reader notes",
 
     value=True
 
@@ -216,9 +275,10 @@ show_meaning = st.checkbox(
 
 
 
-# ----------------------------
-# Input
-# ----------------------------
+
+# -----------------------------------
+# INPUT
+# -----------------------------------
 
 
 uploaded_file = st.file_uploader(
@@ -231,124 +291,192 @@ uploaded_file = st.file_uploader(
 
 
 
-text = st.text_area(
+
+paste_text = st.text_area(
 
     "Or paste a passage",
 
-    height=250
+    height=180
 
 )
 
 
 
 
-if uploaded_file:
-
-
-    text = extract_text_from_pdf(
-        uploaded_file
-    )
-
-
-    st.success(
-        "Book loaded successfully"
-    )
-
-
-
-
-
-
-# ----------------------------
-# Processing
-# ----------------------------
 
 
 if st.button(
-    "Transform Text"
+    "Load Text"
 ):
 
 
-    if not text.strip():
+    text = ""
 
 
-        st.warning(
-            "Please enter text first"
+    if uploaded_file:
+
+
+        text = extract_text_from_pdf(
+            uploaded_file
         )
+
+
+
+    elif paste_text.strip():
+
+
+        text = paste_text
 
 
 
     else:
 
 
+        st.warning(
+            "Upload a PDF or paste text."
+        )
+
+
+
+    if text:
+
+
+        st.session_state.chunks = split_book(
+            text
+        )
+
+
+        st.session_state.page = 0
+
+
+        st.session_state.cache = {}
+
+
+        st.success(
+
+            f"Loaded {len(st.session_state.chunks)} reading sections."
+
+        )
+
+
+
+
+
+
+
+# -----------------------------------
+# READER
+# -----------------------------------
+
+
+if st.session_state.chunks:
+
+
+
+    current_page = st.session_state.page
+
+
+
+    current_text = (
+
+        st.session_state
+        .chunks[current_page]
+
+    )
+
+
+
+    st.caption(
+
+        f"Page {current_page + 1} / {len(st.session_state.chunks)}"
+
+    )
+
+
+
+
+
+    # AI CACHE CHECK
+
+
+    if current_page not in st.session_state.cache:
+
+
+
         with st.spinner(
-            "Understanding the story..."
+            "Preparing your modern version..."
         ):
 
 
-            result = process_text(
-                text,
+            st.session_state.cache[current_page] = process_text(
+
+                current_text,
+
                 level
+
             )
 
 
 
 
-        modern = result[
-            "modern_version"
-        ]
 
 
-        modern = modern.replace(
-            "\n",
-            "<br><br>"
-        )
-
-
-
-        words = result.get(
-            "difficult_words",
-            {}
-        )
-
-
-
-        phrases = result.get(
-            "old_phrases",
-            {}
-        )
-
-
-
-        insight = result.get(
-            "reader_insight",
-            ""
-        )
+    result = st.session_state.cache[
+        current_page
+    ]
 
 
 
 
 
-        original = add_tooltips(
-            text,
-            words
-        )
+    modern = result[
+        "modern_version"
+    ].replace(
+        "\n",
+        "<br><br>"
+    )
+
+
+
+    words = result.get(
+        "difficult_words",
+        {}
+    )
+
+
+
+    phrases = result.get(
+        "old_phrases",
+        {}
+    )
+
+
+
+    insight = result.get(
+        "reader_insight",
+        ""
+    )
 
 
 
 
 
-        # ----------------------------
-        # Reading View
-        # ----------------------------
 
 
-        col1, col2 = st.columns(2)
+    # --------------------------
+    # TEXT DISPLAY
+    # --------------------------
+
+
+    if show_original:
 
 
 
+        left,right = st.columns(2)
 
-        with col1:
+
+
+        with left:
 
 
             st.subheader(
@@ -356,22 +484,28 @@ if st.button(
             )
 
 
+            original = add_tooltips(
+
+                current_text,
+
+                words
+
+            )
+
+
             st.markdown(
 
-                f"""
-                <div class='reader'>
-                {original}
-                </div>
-                """,
+                f"<div class='reader'>{original}</div>",
 
                 unsafe_allow_html=True
+
             )
 
 
 
 
 
-        with col2:
+        with right:
 
 
             st.subheader(
@@ -381,98 +515,89 @@ if st.button(
 
             st.markdown(
 
-                f"""
-                <div class='reader'>
-                {modern}
-                </div>
-                """,
+                f"<div class='reader'>{modern}</div>",
 
                 unsafe_allow_html=True
+
             )
 
 
 
 
 
-        # ----------------------------
-        # Reader Notes
-        # ----------------------------
+    else:
 
 
-        if show_notes:
+        st.subheader(
+            "✨ Modern Version"
+        )
 
 
-            st.divider()
+        st.markdown(
+
+            f"<div class='reader'>{modern}</div>",
+
+            unsafe_allow_html=True
+
+        )
 
 
-            st.header(
-                "🧠 Reader Notes"
-            )
 
 
 
-            with st.container(
-                border=True
+
+
+    # --------------------------
+    # NAVIGATION
+    # --------------------------
+
+
+    prev,next = st.columns(2)
+
+
+
+    with prev:
+
+
+        if st.button(
+            "⬅ Previous"
+        ):
+
+
+            if st.session_state.page > 0:
+
+
+                st.session_state.page -= 1
+
+
+                st.rerun()
+
+
+
+
+
+
+    with next:
+
+
+        if st.button(
+            "Next ➡"
+        ):
+
+
+            if (
+
+                st.session_state.page
+
+                < len(st.session_state.chunks)-1
+
             ):
 
 
-
-                if words:
-
-
-                    st.subheader(
-                        "Vocabulary"
-                    )
+                st.session_state.page += 1
 
 
-
-                    for word, meaning in words.items():
-
-
-                        st.markdown(
-
-                            f"""
-                            <div class="word-card">
-
-                            <b>{word}</b><br>
-
-                            {meaning}
-
-                            </div>
-                            """,
-
-                            unsafe_allow_html=True
-                        )
-
-
-
-
-                if phrases:
-
-
-                    st.subheader(
-                        "Old Expressions"
-                    )
-
-
-
-                    for phrase, meaning in phrases.items():
-
-
-                        st.markdown(
-
-                            f"""
-                            <div class="word-card">
-
-                            <b>{phrase}</b><br>
-
-                            {meaning}
-
-                            </div>
-                            """,
-
-                            unsafe_allow_html=True
-                        )
+                st.rerun()
 
 
 
@@ -480,35 +605,95 @@ if st.button(
 
 
 
-        # ----------------------------
-        # Meaning
-        # ----------------------------
+
+    # --------------------------
+    # NOTES
+    # --------------------------
 
 
-        if show_meaning and insight:
+    if show_notes:
 
 
-            st.divider()
+        st.divider()
 
 
-            st.header(
-                "💭 Understanding the Passage"
-            )
+        st.header(
+            "🧠 Reader Notes"
+        )
+
+
+        with st.container(
+            border=True
+        ):
 
 
 
-            with st.container(
-                border=True
-            ):
+            for word, meaning in words.items():
 
 
                 st.markdown(
 
                     f"""
-                    <div class='note-text'>
-                    {insight}
+
+                    <div class='word-card'>
+
+                    <b>{word}</b><br>
+
+                    {meaning}
+
                     </div>
+
                     """,
 
                     unsafe_allow_html=True
+
                 )
+
+
+
+
+            for phrase, meaning in phrases.items():
+
+
+                st.markdown(
+
+                    f"""
+
+                    <div class='word-card'>
+
+                    <b>{phrase}</b><br>
+
+                    {meaning}
+
+                    </div>
+
+                    """,
+
+                    unsafe_allow_html=True
+
+                )
+
+
+
+
+
+
+    if show_meaning and insight:
+
+
+        st.divider()
+
+
+        st.header(
+            "💭 Understanding"
+        )
+
+
+        with st.container(
+            border=True
+        ):
+
+
+            st.markdown(
+                insight
+            )
