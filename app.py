@@ -594,27 +594,15 @@ if st.session_state.chunks:
 
     # ---------- TEXT DISPLAY ----------
 
-
-
     if show_original:
 
-
-
-
-        left,right = st.columns(2)
-
-
-
-
+        left, right = st.columns(2)
 
         with left:
-
 
             st.header(
                 "📖 Original"
             )
-
-
 
             st.markdown(
 
@@ -628,20 +616,11 @@ if st.session_state.chunks:
 
             )
 
-
-
-
-
-
         with right:
 
-
-
             st.header(
-                "✨ Modern Version"
+                f"✨ {level} Version"
             )
-
-
 
             st.markdown(
 
@@ -655,22 +634,11 @@ if st.session_state.chunks:
 
             )
 
-
-
-
-
-
-
     else:
 
-
-
-
         st.header(
-            "✨ Modern Version"
+            f"✨ {level} Version"
         )
-
-
 
         st.markdown(
 
@@ -686,166 +654,76 @@ if st.session_state.chunks:
 
 
 
-
-
-
-
-
-
-
     # ---------- NAVIGATION ----------
 
-
-
-    back,regen,next_page,clear = st.columns(4)
-
-
-
-
+    back, regen, next_page, clear = st.columns(4)
 
     with back:
-
-
 
         if st.button(
             "⬅ Previous"
         ):
 
-
-
             if page > 0:
-
-
 
                 st.session_state.page -= 1
 
-
-
                 st.rerun()
 
-
-
-
-
-
-
     with regen:
-
-
 
         if st.button(
             "🔄 Regenerate"
         ):
 
-
-
             st.session_state.cache.pop(
-
                 page,
-
                 None
-
             )
-
-
 
             st.rerun()
 
-
-
-
-
-
-
-
     with next_page:
 
-
-
         if page < total - 1:
-
-
 
             if st.button(
                 "Next ➡"
             ):
 
-
-
                 st.session_state.page += 1
-
-
 
                 st.rerun()
 
-
-
-
-
-
-
     with clear:
-
-
 
         if st.button(
             "🗑 Clear Book"
         ):
 
-
-
             st.session_state.chunks = []
-
-
-
             st.session_state.cache = {}
-
-
-
             st.session_state.page = 0
-
-
 
             st.rerun()
 
 
 
-
-
-
-
-
-
-
     # ---------- NOTES ----------
 
-
-
     if show_notes:
-
-
 
         with st.expander(
             "🧠 Reader Notes"
         ):
 
-
-
-
             if words:
-
-
 
                 st.subheader(
                     "Vocabulary"
                 )
 
-
-
-
-                for word,meaning in words.items():
-
-
+                for word, meaning in words.items():
 
                     st.markdown(
 
@@ -863,26 +741,13 @@ if st.session_state.chunks:
 
                     )
 
-
-
-
-
-
-
             if phrases:
-
-
 
                 st.subheader(
                     "Old Expressions"
                 )
 
-
-
-
-                for phrase,meaning in phrases.items():
-
-
+                for phrase, meaning in phrases.items():
 
                     st.markdown(
 
@@ -902,19 +767,9 @@ if st.session_state.chunks:
 
 
 
-
-
-
-
-
-
     # ---------- UNDERSTANDING ----------
 
-
-
     if show_meaning and insight:
-
-
 
         with st.expander(
 
@@ -922,10 +777,6 @@ if st.session_state.chunks:
 
         ):
 
-
-
             st.write(
-
                 insight
-
             )
